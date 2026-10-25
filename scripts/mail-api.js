@@ -75,11 +75,12 @@ export class MailClient {
 
   /**
    * Fetch active disposable domains.
+   * Handles both JSON-LD Hydra format and direct JSON array format.
    * @returns {Promise<string[]>}
    */
   async getAvailableDomains() {
     const data = await this._request('/domains');
-    const members = data['hydra:member'] || [];
+    const members = Array.isArray(data) ? data : (data['hydra:member'] || []);
     return members
       .filter(item => item.isActive !== false)
       .map(item => item.domain);
@@ -87,6 +88,7 @@ export class MailClient {
 
   /**
    * Create an account on Mail.tm and obtain JWT token.
+   * Uses sanitized address returned by Mail.tm for token retrieval.
    * @param {string} address
    * @param {string} password
    * @returns {Promise<{ id: string, address: string, token: string }>}
@@ -97,14 +99,16 @@ export class MailClient {
       body: JSON.stringify({ address, password })
     });
 
+    const validAddress = accountData.address || address;
+
     const tokenData = await this._request('/token', {
       method: 'POST',
-      body: JSON.stringify({ address, password })
+      body: JSON.stringify({ address: validAddress, password })
     });
 
     return {
       id: accountData.id,
-      address: accountData.address,
+      address: validAddress,
       token: tokenData.token
     };
   }
@@ -125,6 +129,7 @@ export class MailClient {
 
   /**
    * List messages for an authenticated inbox.
+   * Handles both JSON-LD Hydra format and direct JSON array format.
    * @param {string} token
    * @returns {Promise<Array>}
    */
@@ -132,7 +137,7 @@ export class MailClient {
     const data = await this._request('/messages', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    return data['hydra:member'] || [];
+    return Array.isArray(data) ? data : (data['hydra:member'] || []);
   }
 
   /**

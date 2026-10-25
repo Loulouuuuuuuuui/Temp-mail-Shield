@@ -173,7 +173,7 @@ async function generateNewIdentity(force = false) {
     const domain = domains[Math.floor(Math.random() * domains.length)];
     elements.inboxDomainTag.textContent = domain;
 
-    const usernamePrefix = `user.${Math.random().toString(36).substring(2, 8)}.${Date.now().toString().slice(-4)}`;
+    const usernamePrefix = `usr${Math.random().toString(36).substring(2, 8)}${Date.now().toString().slice(-4)}`;
     const emailAddress = `${usernamePrefix}@${domain}`;
     const password = generatePassword(16);
 

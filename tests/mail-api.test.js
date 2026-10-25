@@ -26,6 +26,50 @@ test('extractVerificationDetails captures code wrapped inside HTML tags', () => 
   assert.equal(res.code, '849201');
 });
 
+test('MailClient fetches available domains when response is a direct Array', async () => {
+  const mockFetch = async (url) => {
+    if (url.includes('/domains')) {
+      return {
+        ok: true,
+        json: async () => [
+          { domain: 'direct-array.com', isActive: true },
+          { domain: 'inactive.com', isActive: false }
+        ]
+      };
+    }
+    throw new Error('Not found');
+  };
+
+  const client = new MailClient({ fetchFn: mockFetch });
+  const domains = await client.getAvailableDomains();
+  assert.deepEqual(domains, ['direct-array.com']);
+});
+
+test('MailClient creates account using sanitized address for token retrieval', async () => {
+  const mockFetch = async (url, options) => {
+    if (url.includes('/accounts')) {
+      return {
+        ok: true,
+        json: async () => ({ id: 'acc_1', address: 'sanitizeduser@temp.com' })
+      };
+    }
+    if (url.includes('/token')) {
+      const body = JSON.parse(options.body);
+      assert.equal(body.address, 'sanitizeduser@temp.com', 'token request must use sanitized address');
+      return {
+        ok: true,
+        json: async () => ({ token: 'valid_token' })
+      };
+    }
+    throw new Error('Unknown route');
+  };
+
+  const client = new MailClient({ fetchFn: mockFetch });
+  const acc = await client.createAccount('unsanitized.user@temp.com', 'Pass123!');
+  assert.equal(acc.address, 'sanitizeduser@temp.com');
+  assert.equal(acc.token, 'valid_token');
+});
+
 test('MailClient fetches available domains', async () => {
   const mockFetch = async (url) => {
     if (url.includes('/domains')) {
