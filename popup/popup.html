@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TempMail Shield</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">🛡️</span>
+      <span class="brand-title">TempMail Shield</span>
+    </div>
+    <div class="domain-pill" id="current-domain-badge">
+      <span class="status-dot"></span>
+      <span id="current-domain-text">Chargement...</span>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" data-tab="generator">
+      <span class="tab-icon">⚡</span> Générer
+    </button>
+    <button class="tab-btn" data-tab="inbox">
+      <span class="tab-icon">📬</span> Boîte
+      <span class="badge hidden" id="inbox-badge">0</span>
+    </button>
+    <button class="tab-btn" data-tab="vault">
+      <span class="tab-icon">🔐</span> Comptes
+      <span class="counter" id="vault-counter">(0)</span>
+    </button>
+  </nav>
+
+  <!-- MAIN TAB CONTENTS -->
+  <main class="tab-content-container">
+
+    <!-- TAB 1: GENERATOR -->
+    <section class="tab-panel active" id="tab-generator">
+      <!-- EXISTING ACCOUNT DETECTED CARD -->
+      <div class="card existing-card hidden" id="existing-account-card">
+        <div class="card-header-badge">
+          <span>💾 Compte enregistré trouvé pour ce site</span>
+        </div>
+        <div class="field-group">
+          <label>E-mail enregistré</label>
+          <div class="input-action-group">
+            <input type="text" id="existing-email" readonly>
+            <button class="btn btn-secondary btn-icon" id="btn-copy-existing-email" title="Copier l'e-mail">📋</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Mot de passe</label>
+          <div class="input-action-group">
+            <input type="password" id="existing-password" readonly>
+            <button class="btn btn-secondary btn-icon" id="btn-toggle-existing-pwd" title="Afficher/Masquer">👁️</button>
+            <button class="btn btn-secondary btn-icon" id="btn-copy-existing-pwd" title="Copier le mot de passe">📋</button>
+          </div>
+        </div>
+        <div class="actions-stack">
+          <button class="btn btn-primary" id="btn-autofill-existing">
+            ⚡ Pré-remplir la connexion
+          </button>
+          <button class="btn btn-outline" id="btn-replace-existing">
+            🔄 Créer un nouveau compte jetable (remplacer)
+          </button>
+        </div>
+      </div>
+
+      <!-- NEW ACCOUNT GENERATION CARD -->
+      <div class="card" id="new-account-card">
+        <div class="field-group">
+          <div class="label-row">
+            <label for="temp-email">E-mail temporaire actif</label>
+            <span class="hint-tag" id="inbox-domain-tag">mail.tm</span>
+          </div>
+          <div class="input-action-group">
+            <input type="text" id="temp-email" placeholder="Génération en cours..." readonly>
+            <button class="btn btn-secondary btn-icon" id="btn-copy-email" title="Copier l'e-mail">📋</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="label-row">
+            <label for="temp-password">Mot de passe sécurisé</label>
+            <span class="hint-tag">16 car. fort</span>
+          </div>
+          <div class="input-action-group">
+            <input type="password" id="temp-password" placeholder="Mot de passe..." readonly>
+            <button class="btn btn-secondary btn-icon" id="btn-toggle-password" title="Afficher/Masquer">👁️</button>
+            <button class="btn btn-secondary btn-icon" id="btn-copy-password" title="Copier le mot de passe">📋</button>
+          </div>
+        </div>
+
+        <div class="actions-stack">
+          <button class="btn btn-primary" id="btn-autofill-form">
+            ⚡ Pré-remplir le formulaire
+          </button>
+          <div class="btn-row">
+            <button class="btn btn-success" id="btn-save-account">
+              💾 Enregistrer pour ce site
+            </button>
+            <button class="btn btn-secondary" id="btn-refresh-identity" title="Générer une nouvelle identité">
+              🔄 Nouveau
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-notice" id="generator-notice">
+        <span>💡 Les e-mails de confirmation s'affichent automatiquement dans l'onglet <strong>Boîte</strong>.</span>
+      </div>
+    </section>
+
+    <!-- TAB 2: INBOX -->
+    <section class="tab-panel" id="tab-inbox">
+      <!-- HEADER WITH REFRESH -->
+      <div class="inbox-controls">
+        <div class="inbox-info">
+          <span class="inbox-address-preview" id="inbox-address-preview">Aucun compte actif</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-refresh-inbox">
+          🔄 Actualiser
+        </button>
+      </div>
+
+      <!-- PROMINENT VERIFICATION CODE HIGHLIGHT CARD -->
+      <div class="verification-code-card hidden" id="verification-code-card">
+        <div class="code-header">
+          <span class="code-badge">CODE DE VÉRIFICATION DÉTECTÉ</span>
+        </div>
+        <div class="code-value-display" id="extracted-code-value">------</div>
+        <button class="btn btn-primary btn-sm" id="btn-copy-extracted-code">
+          📋 Copier le code
+        </button>
+        <div class="activation-link-container hidden" id="activation-link-container">
+          <a href="#" target="_blank" class="activation-btn" id="btn-open-activation-link">
+            🔗 Ouvrir le lien d'activation
+          </a>
+        </div>
+      </div>
+
+      <!-- MESSAGES LIST -->
+      <div class="messages-container" id="messages-list">
+        <div class="empty-inbox-state" id="inbox-empty-state">
+          <div class="empty-icon">⏳</div>
+          <div class="empty-title">En attente d'e-mails...</div>
+          <p class="empty-desc">Les messages reçus sur votre adresse temporaire apparaîtront ici automatiquement.</p>
+        </div>
+      </div>
+
+      <!-- DETAIL MODAL -->
+      <div class="message-modal hidden" id="message-detail-modal">
+        <div class="modal-header">
+          <button class="btn-back" id="btn-close-modal">← Retour</button>
+          <h3 id="modal-msg-subject">Objet du message</h3>
+        </div>
+        <div class="modal-meta">
+          <span id="modal-msg-from">De : ...</span>
+          <span id="modal-msg-date">...</span>
+        </div>
+        <div class="modal-body" id="modal-msg-body">
+          <!-- Text or parsed HTML -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: VAULT -->
+    <section class="tab-panel" id="tab-vault">
+      <div class="vault-toolbar">
+        <input type="search" id="vault-search-input" placeholder="🔍 Rechercher un site ou un e-mail..." class="search-input">
+        <button class="btn btn-secondary btn-sm" id="btn-export-vault" title="Sauvegarder vos comptes en JSON">
+          📥 Exporter
+        </button>
+      </div>
+
+      <div class="vault-list" id="vault-items-list">
+        <div class="empty-vault-state" id="vault-empty-state">
+          <div class="empty-icon">🔐</div>
+          <div class="empty-title">Aucun compte enregistré</div>
+          <p class="empty-desc">Lorsque vous cliquez sur « Enregistrer pour ce site », vos identifiants sont sauvegardés ici.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-notification hidden" id="toast-notification">Notification</div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
