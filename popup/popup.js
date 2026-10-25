@@ -73,6 +73,7 @@ const state = {
   activeAccount: null, // { address, password, token }
   existingVaultAccount: null,
   messages: [],
+  lastProcessedMsgId: null,
   inboxPollingInterval: null
 };
 
@@ -87,6 +88,22 @@ function showToast(message, duration = 2000) {
   elements.toast._timeout = setTimeout(() => {
     elements.toast.classList.add('hidden');
   }, duration);
+}
+
+/** Clear toolbar badge if Chrome action API is available */
+function clearToolbarBadge() {
+  if (typeof chrome !== 'undefined') {
+    if (chrome.action?.setBadgeText) {
+      chrome.action.setBadgeText({ text: '' });
+    }
+    if (chrome.runtime?.sendMessage) {
+      try {
+        chrome.runtime.sendMessage({ type: 'CLEAR_BADGE' }, () => {});
+      } catch {
+        // ignore
+      }
+    }
+  }
 }
 
 /** Copy text to clipboard and show feedback */
@@ -119,6 +136,7 @@ function switchTab(tabName) {
   });
 
   if (tabName === 'inbox') {
+    clearToolbarBadge();
     refreshInboxMessages();
   } else if (tabName === 'vault') {
     renderVaultList();
@@ -165,6 +183,7 @@ async function generateNewIdentity(force = false) {
       token: account.token,
       password: password
     };
+    state.lastProcessedMsgId = null;
 
     elements.tempEmail.value = state.activeAccount.address;
     elements.tempPassword.value = state.activeAccount.password;
@@ -182,6 +201,7 @@ async function generateNewIdentity(force = false) {
 
 /** Initialize state for current domain */
 async function initializeDomainState() {
+  clearToolbarBadge();
   await detectCurrentDomain();
 
   // 1. Check if an account already exists in Vault
@@ -189,11 +209,14 @@ async function initializeDomainState() {
   state.existingVaultAccount = existing;
 
   if (existing) {
+    // Show only existing account card by default to avoid confusion
     elements.existingAccountCard.classList.remove('hidden');
+    elements.newAccountCard.classList.add('hidden');
     elements.existingEmail.value = existing.email;
     elements.existingPassword.value = existing.password;
   } else {
     elements.existingAccountCard.classList.add('hidden');
+    elements.newAccountCard.classList.remove('hidden');
   }
 
   // 2. Check if an active session exists
@@ -270,7 +293,7 @@ async function refreshInboxMessages() {
     const messages = await mailClient.getMessages(state.activeAccount.token);
     state.messages = messages || [];
 
-    // Update badge
+    // Update badge inside popup header
     const count = state.messages.length;
     if (count > 0) {
       elements.inboxBadge.textContent = String(count);
@@ -282,17 +305,20 @@ async function refreshInboxMessages() {
     // Render list
     renderMessagesList();
 
-    // Scan the latest message for code if not already found
+    // Cache latest message ID to avoid redundant full-message requests every 4 seconds
     if (state.messages.length > 0) {
       const latestMsg = state.messages[0];
-      const fullMsg = await mailClient.getMessage(state.activeAccount.token, latestMsg.id);
-      if (fullMsg.extracted && fullMsg.extracted.code) {
-        elements.extractedCodeValue.textContent = fullMsg.extracted.code;
-        elements.verificationCodeCard.classList.remove('hidden');
-      }
-      if (fullMsg.extracted && fullMsg.extracted.activationUrl) {
-        elements.btnOpenActivationLink.href = fullMsg.extracted.activationUrl;
-        elements.activationLinkContainer.classList.remove('hidden');
+      if (latestMsg.id !== state.lastProcessedMsgId) {
+        state.lastProcessedMsgId = latestMsg.id;
+        const fullMsg = await mailClient.getMessage(state.activeAccount.token, latestMsg.id);
+        if (fullMsg.extracted && fullMsg.extracted.code) {
+          elements.extractedCodeValue.textContent = fullMsg.extracted.code;
+          elements.verificationCodeCard.classList.remove('hidden');
+        }
+        if (fullMsg.extracted && fullMsg.extracted.activationUrl) {
+          elements.btnOpenActivationLink.href = fullMsg.extracted.activationUrl;
+          elements.activationLinkContainer.classList.remove('hidden');
+        }
       }
     }
   } catch (err) {
@@ -302,7 +328,6 @@ async function refreshInboxMessages() {
 
 /** Render list of message items in Tab 2 */
 function renderMessagesList() {
-  // Clear previous message items except empty state and detail modal
   const existingItems = elements.messagesList.querySelectorAll('.message-item');
   existingItems.forEach(el => el.remove());
 
@@ -405,6 +430,7 @@ async function renderVaultList(filterQuery = '') {
       showToast(`Compte pour ${domain} supprimé`);
       if (domain === state.currentDomain) {
         elements.existingAccountCard.classList.add('hidden');
+        elements.newAccountCard.classList.remove('hidden');
       }
     });
 
@@ -487,6 +513,7 @@ function setupEventListeners() {
 
   elements.btnReplaceExisting.addEventListener('click', async () => {
     elements.existingAccountCard.classList.add('hidden');
+    elements.newAccountCard.classList.remove('hidden');
     await generateNewIdentity(true);
     showToast('Nouveau compte généré. Cliquez sur Enregistrer pour remplacer.');
   });

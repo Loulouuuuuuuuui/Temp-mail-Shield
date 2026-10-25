@@ -68,3 +68,45 @@ test('checkPendingSessions clears badge when no active sessions have messages', 
   assert.equal(count, 0);
   assert.equal(badgeText, '');
 });
+
+test('checkPendingSessions counts only unread (seen === false) messages', async () => {
+  let badgeText = '';
+  const mockAction = {
+    setBadgeText: ({ text }) => { badgeText = text; },
+    setBadgeBackgroundColor: () => {}
+  };
+  const mockVault = {
+    getAllActiveSessions: async () => ({
+      'example.com': { token: 't1', updatedAt: new Date().toISOString() }
+    })
+  };
+  const mockMailClient = {
+    getMessages: async () => [
+      { id: 'm1', seen: true },
+      { id: 'm2', seen: false }
+    ]
+  };
+  const count = await checkPendingSessions({ action: mockAction, vault: mockVault, mailClient: mockMailClient });
+  assert.equal(count, 1);
+  assert.equal(badgeText, '1');
+});
+
+test('checkPendingSessions ignores sessions older than 30 minutes', async () => {
+  let badgeText = '';
+  const mockAction = {
+    setBadgeText: ({ text }) => { badgeText = text; },
+    setBadgeBackgroundColor: () => {}
+  };
+  const mockVault = {
+    getAllActiveSessions: async () => ({
+      'old.com': { token: 't1', updatedAt: new Date(Date.now() - 40 * 60 * 1000).toISOString() }
+    })
+  };
+  const mockMailClient = {
+    getMessages: async () => [{ id: 'm1', seen: false }]
+  };
+  const count = await checkPendingSessions({ action: mockAction, vault: mockVault, mailClient: mockMailClient });
+  assert.equal(count, 0);
+  assert.equal(badgeText, '');
+});
+

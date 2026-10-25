@@ -7,6 +7,7 @@ import { MailClient } from './scripts/mail-api.js';
 import { Vault } from './scripts/vault.js';
 
 const ALARM_NAME = 'check_temp_mail_inboxes';
+const MAX_SESSION_AGE_MS = 30 * 60 * 1000; // 30 minutes active window
 
 /**
  * Check all active sessions and update toolbar badge accordingly.
@@ -20,7 +21,8 @@ export async function checkPendingSessions(options = {}) {
 
   if (!action) return 0;
 
-  let totalMessages = 0;
+  let totalUnread = 0;
+  const now = Date.now();
 
   try {
     const sessions = await vault.getAllActiveSessions();
@@ -28,17 +30,25 @@ export async function checkPendingSessions(options = {}) {
 
     for (const session of sessionList) {
       if (!session || !session.token) continue;
+
+      // Only check sessions active within the last 30 minutes
+      const sessionTime = new Date(session.updatedAt || session.createdAt || 0).getTime();
+      if (sessionTime && (now - sessionTime) > MAX_SESSION_AGE_MS) {
+        continue;
+      }
+
       try {
         const messages = await mailClient.getMessages(session.token);
-        totalMessages += (messages || []).length;
+        // Only count unread messages
+        const unread = (messages || []).filter(m => !m.seen);
+        totalUnread += unread.length;
       } catch (err) {
-        // Token might have expired or temporary rate limit, continue checking others
         console.warn(`[TempMail Background] Error checking session for ${session.domain}:`, err.message);
       }
     }
 
-    if (totalMessages > 0) {
-      await action.setBadgeText({ text: String(totalMessages) });
+    if (totalUnread > 0) {
+      await action.setBadgeText({ text: String(totalUnread) });
       if (action.setBadgeBackgroundColor) {
         await action.setBadgeBackgroundColor({ color: '#34c759' });
       }
@@ -49,7 +59,7 @@ export async function checkPendingSessions(options = {}) {
     console.error('[TempMail Background] Check failed:', globalErr);
   }
 
-  return totalMessages;
+  return totalUnread;
 }
 
 // Chrome Extension Runtime Lifecycle
@@ -74,7 +84,7 @@ if (typeof globalThis.chrome !== 'undefined' && globalThis.chrome.runtime) {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === 'REFRESH_BADGE') {
       checkPendingSessions().then(count => sendResponse({ count }));
-      return true; // Keep message channel open for async response
+      return true;
     }
     if (message?.type === 'CLEAR_BADGE') {
       if (chrome.action) {

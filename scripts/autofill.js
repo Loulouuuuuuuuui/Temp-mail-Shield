@@ -1,45 +1,46 @@
 /**
  * Form Autofill Content Script
  * Heuristically detects registration and login fields on the active page and fills them safely.
+ * Fully self-contained to support chrome.scripting.executeScript string serialization.
  */
-
-function dispatchInputEvents(element) {
-  const EventConstructor = globalThis.Event || function(type, opts) {
-    return { type, bubbles: !!opts?.bubbles };
-  };
-
-  try {
-    element.dispatchEvent(new EventConstructor('input', { bubbles: true }));
-    element.dispatchEvent(new EventConstructor('change', { bubbles: true }));
-  } catch {
-    // Ignore fallback errors in non-browser environments
-  }
-}
-
-function setNativeValue(element, value) {
-  element.value = value;
-  // Handle React/Angular input tracker overrides
-  if (typeof globalThis.window !== 'undefined' && globalThis.window.HTMLInputElement) {
-    const protoDesc = Object.getOwnPropertyDescriptor(globalThis.window.HTMLInputElement.prototype, 'value');
-    if (protoDesc && protoDesc.set) {
-      try {
-        protoDesc.set.call(element, value);
-      } catch {
-        // fallback to standard assignment
-      }
-    }
-  }
-}
 
 /**
  * Scan DOM inputs and fill email and password.
- * @param {Document|Object} doc
- * @param {{ email?: string, password?: string }} credentials
+ * Self-contained function suitable for direct serialization via chrome.scripting.executeScript.
+ * @param {Document|Object} [doc=globalThis.document]
+ * @param {{ email?: string, password?: string }} [credentials={}]
  * @returns {{ filledEmail: boolean, filledPassword: boolean }}
  */
 export function fillFormFields(doc = globalThis.document, { email, password } = {}) {
   let filledEmail = false;
   let filledPassword = false;
+
+  function dispatchEvents(element) {
+    const EventCtor = globalThis.Event || function(type, opts) {
+      return { type, bubbles: !!opts?.bubbles };
+    };
+    try {
+      element.dispatchEvent(new EventCtor('input', { bubbles: true }));
+      element.dispatchEvent(new EventCtor('change', { bubbles: true }));
+    } catch {
+      // ignore
+    }
+  }
+
+  function setValue(element, val) {
+    element.value = val;
+    // Support React 16+ / Angular synthetic event tracker descriptors
+    if (typeof globalThis.window !== 'undefined' && globalThis.window.HTMLInputElement) {
+      const protoDesc = Object.getOwnPropertyDescriptor(globalThis.window.HTMLInputElement.prototype, 'value');
+      if (protoDesc && protoDesc.set) {
+        try {
+          protoDesc.set.call(element, val);
+        } catch {
+          // fallback
+        }
+      }
+    }
+  }
 
   if (!doc || !doc.querySelectorAll) {
     return { filledEmail, filledPassword };
@@ -69,8 +70,8 @@ export function fillFormFields(doc = globalThis.document, { email, password } = 
   }
 
   if (emailInput && email) {
-    setNativeValue(emailInput, email);
-    dispatchInputEvents(emailInput);
+    setValue(emailInput, email);
+    dispatchEvents(emailInput);
     filledEmail = true;
   }
 
@@ -79,8 +80,8 @@ export function fillFormFields(doc = globalThis.document, { email, password } = 
 
   if (passwordInputs.length > 0 && password) {
     passwordInputs.forEach(pwdInput => {
-      setNativeValue(pwdInput, password);
-      dispatchInputEvents(pwdInput);
+      setValue(pwdInput, password);
+      dispatchEvents(pwdInput);
       filledPassword = true;
     });
   }
@@ -88,8 +89,7 @@ export function fillFormFields(doc = globalThis.document, { email, password } = 
   return { filledEmail, filledPassword };
 }
 
-// Self-invoking handler when injected directly by chrome.scripting.executeScript
+// Global registry when injected directly into top window
 if (typeof globalThis.window !== 'undefined' && typeof globalThis.document !== 'undefined') {
-  // Can be called directly or via script args
   globalThis.__tempMailAutofill = fillFormFields;
 }

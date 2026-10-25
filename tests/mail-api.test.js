@@ -20,6 +20,12 @@ test('extractVerificationDetails captures activation link when present', () => {
   assert.equal(res.activationUrl, "https://example.com/auth/verify?token=abc123xyz");
 });
 
+test('extractVerificationDetails captures code wrapped inside HTML tags', () => {
+  const htmlBody = '<p>Votre code de confirmation est : <strong>849201</strong>. Ne le partagez pas.</p>';
+  const res = extractVerificationDetails('Validation', htmlBody);
+  assert.equal(res.code, '849201');
+});
+
 test('MailClient fetches available domains', async () => {
   const mockFetch = async (url) => {
     if (url.includes('/domains')) {

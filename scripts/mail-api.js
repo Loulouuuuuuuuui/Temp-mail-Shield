@@ -12,7 +12,9 @@ const DEFAULT_BASE_URL = 'https://api.mail.tm';
  * @returns {{ code: string | null, activationUrl: string | null }}
  */
 export function extractVerificationDetails(subject = '', body = '') {
-  const combined = `${subject}\n${body}`;
+  // Strip HTML tags for clean text matching
+  const cleanBody = body.replace(/<[^>]+>/g, ' ');
+  const combined = `${subject}\n${cleanBody}`;
 
   let code = null;
   let activationUrl = null;

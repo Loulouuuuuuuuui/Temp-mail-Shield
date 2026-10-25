@@ -71,3 +71,19 @@ test('fillFormFields populates password confirmation field if present', () => {
   assert.equal(pwdInput.value, 'SuperPassword1!');
   assert.equal(confirmPwdInput.value, 'SuperPassword1!');
 });
+
+test('fillFormFields is self-contained when serialized via toString() (MV3 executeScript compliance)', () => {
+  const serialized = `(${fillFormFields.toString()})(mockDoc, { email: 'test@mail.com', password: 'pwd' })`;
+  const inputs = [
+    { type: 'email', value: '', events: [], dispatchEvent(e) { this.events.push(e.type); } },
+    { type: 'password', value: '', events: [], dispatchEvent(e) { this.events.push(e.type); } }
+  ];
+  const mockDoc = { querySelectorAll: () => inputs };
+
+  const runIsolated = new Function('mockDoc', `return ${serialized}`);
+  const result = runIsolated(mockDoc);
+  assert.equal(result.filledEmail, true);
+  assert.equal(result.filledPassword, true);
+  assert.equal(inputs[0].value, 'test@mail.com');
+});
+
