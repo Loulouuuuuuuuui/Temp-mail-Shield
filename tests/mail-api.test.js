@@ -26,6 +26,20 @@ test('extractVerificationDetails captures code wrapped inside HTML tags', () => 
   assert.equal(res.code, '849201');
 });
 
+test('extractVerificationDetails captures activation link from HTML href attribute', () => {
+  const htmlBody = '<div>Bienvenue ! Veuillez <a href="https://example.com/confirm?id=9988">cliquer ici</a> pour activer.</div>';
+  const res = extractVerificationDetails('Bienvenue', htmlBody);
+  assert.equal(res.activationUrl, 'https://example.com/confirm?id=9988');
+  assert.ok(res.links.includes('https://example.com/confirm?id=9988'));
+});
+
+test('extractVerificationDetails falls back to first non-unsubscribe link if no keyword in URL', () => {
+  const textBody = 'Pour continuer, visitez https://service.org/welcome/user123 ou désabonnez-vous sur https://service.org/unsubscribe';
+  const res = extractVerificationDetails('Notification', textBody);
+  assert.equal(res.activationUrl, 'https://service.org/welcome/user123');
+  assert.equal(res.links.length, 2);
+});
+
 test('MailClient fetches available domains when response is a direct Array', async () => {
   const mockFetch = async (url) => {
     if (url.includes('/domains')) {

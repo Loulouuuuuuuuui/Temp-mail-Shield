@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Chrome_Extension-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Manifest V3"/>
   <img src="https://img.shields.io/badge/Stack-Vanilla_JS_&_CSS3-F7DF1E?logo=javascript&logoColor=black" alt="Vanilla JS"/>
-  <img src="https://img.shields.io/badge/Tests-26%2F26_Passing-success" alt="Tests 26/26 Passing"/>
+  <img src="https://img.shields.io/badge/Tests-28%2F28_Passing-success" alt="Tests 28/28 Passing"/>
   <img src="https://img.shields.io/badge/Privacy-100%25_Local_Storage-green" alt="Privacy First"/>
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License MIT"/>
 </p>
@@ -25,7 +25,7 @@
 - La revente de votre adresse à des courtiers de données tiers.
 - Des risques de compromission lors de fuites de bases de données.
 
-**TempMail Shield** résout ce problème à la source : en ouvrant l'extension au moment de l'inscription, vous obtenez une adresse e-mail temporaire (via l'infrastructure gratuite et fiable de [Mail.tm](https://mail.tm)) ainsi qu'un mot de passe fort généré localement. Vous n'avez plus besoin d'ouvrir un onglet séparé : le code de confirmation s'affiche directement dans l'extension !
+**TempMail Shield** résout ce problème à la source : en ouvrant l'extension au moment de l'inscription, vous obtenez une adresse e-mail temporaire (via l'infrastructure gratuite et fiable de [Mail.tm](https://mail.tm)) ainsi qu'un mot de passe fort généré localement. Vous n'avez plus besoin d'ouvrir un onglet séparé : le code de confirmation s'affiche directement dans l'extension et les liens d'activation sont immédiatement cliquables !
 
 ---
 
@@ -35,7 +35,7 @@
 | :--- | :--- |
 | **⚡ Génération Instantanée** | Dès l'ouverture, l'extension génère une adresse e-mail active et un mot de passe sécurisé à haute entropie (16 caractères avec chiffres et symboles). |
 | **🪄 Remplissage Automatique (1 Clic)** | Un bouton dédié « **Pré-remplir le formulaire** » détecte les champs d'e-mail et de mot de passe sur la page web active et les remplit automatiquement (compatible avec React, Vue, Angular et HTML natif). |
-| **📬 Boîte de Réception & Extraction de Code** | Visualisez les e-mails reçus en temps réel. L'extension isole automatiquement les **codes de vérification à 4-8 chiffres** (ex. `849201`) et les **liens d'activation** dans un encadré en grand avec copie rapide. |
+| **📬 Boîte de Réception & Liens Cliquables** | Visualisez les e-mails reçus en temps réel. L'extension isole automatiquement les **codes de vérification à 4-8 chiffres** et rend tous les **liens d'activation et de confirmation directement cliquables** (ouverture dans un nouvel onglet Chrome) avec bouton de copie rapide. |
 | **🔔 Pastille de Notification Discrète** | Si vous fermez la fenêtre de l'extension pour valider le formulaire, un Service Worker d'arrière-plan surveille la réception et affiche un badge vert (`1`) sur l'icône Chrome dès que l'e-mail arrive. |
 | **🔐 Coffre-Fort Local par Domaine** | Enregistrez vos identifiants par site. Tout est stocké de manière chiffrée et locale sur votre machine (`chrome.storage.local`) : **aucun mot de passe ne quitte votre navigateur**. |
 | **🔄 Reconnexion Intelligente** | En revisitant un site déjà enregistré, l'extension vous propose directement de réinjecter vos identifiants existants pour vous reconnecter, ou de générer un nouveau compte jetable pour remplacer l'ancien. |
@@ -103,7 +103,7 @@ Temp-mail-Shield/
 
 ## 🧪 Tests Unitaires Automatisés
 
-Le projet intègre une suite de 26 tests unitaires automatisés utilisant le test runner natif de Node.js, sans aucune dépendance npm :
+Le projet intègre une suite de 28 tests unitaires automatisés utilisant le test runner natif de Node.js, sans aucune dépendance npm :
 
 ```bash
 npm test

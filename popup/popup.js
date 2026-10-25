@@ -43,10 +43,12 @@ const elements = {
   inboxAddressPreview: document.getElementById('inbox-address-preview'),
   btnRefreshInbox: document.getElementById('btn-refresh-inbox'),
   verificationCodeCard: document.getElementById('verification-code-card'),
+  verificationBadgeText: document.getElementById('verification-badge-text'),
   extractedCodeValue: document.getElementById('extracted-code-value'),
   btnCopyExtractedCode: document.getElementById('btn-copy-extracted-code'),
   activationLinkContainer: document.getElementById('activation-link-container'),
   btnOpenActivationLink: document.getElementById('btn-open-activation-link'),
+  btnCopyActivationLink: document.getElementById('btn-copy-activation-link'),
   messagesList: document.getElementById('messages-list'),
   inboxEmptyState: document.getElementById('inbox-empty-state'),
   messageDetailModal: document.getElementById('message-detail-modal'),
@@ -54,6 +56,8 @@ const elements = {
   modalMsgSubject: document.getElementById('modal-msg-subject'),
   modalMsgFrom: document.getElementById('modal-msg-from'),
   modalMsgDate: document.getElementById('modal-msg-date'),
+  modalLinksSection: document.getElementById('modal-links-section'),
+  modalLinksList: document.getElementById('modal-links-list'),
   modalMsgBody: document.getElementById('modal-msg-body'),
 
   // Tab 3: Vault
@@ -125,6 +129,33 @@ async function copyToClipboard(text, label = 'Copié !') {
   } catch (err) {
     showToast('Erreur lors de la copie');
   }
+}
+
+/** Safely open an external URL in a new browser tab */
+function openUrl(url) {
+  if (!url || !url.startsWith('http')) return;
+  if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+    chrome.tabs.create({ url });
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
+
+/** Convert plain text with URLs into safe HTML with clickable links */
+function linkifyText(text) {
+  if (!text) return '';
+  const escaped = escapeHtml(text);
+  const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+  return escaped.replace(urlRegex, (url) => {
+    let cleanUrl = url;
+    let trailing = '';
+    const match = cleanUrl.match(/([.,;:)!?]+)$/);
+    if (match) {
+      trailing = match[1];
+      cleanUrl = cleanUrl.slice(0, -trailing.length);
+    }
+    return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" class="email-link">${cleanUrl}</a>${trailing}`;
+  });
 }
 
 /** Switch active tab */
@@ -335,13 +366,31 @@ async function refreshInboxMessages() {
       if (latestMsg.id !== state.lastProcessedMsgId) {
         state.lastProcessedMsgId = latestMsg.id;
         const fullMsg = await mailClient.getMessage(state.activeAccount.token, latestMsg.id);
-        if (fullMsg.extracted && fullMsg.extracted.code) {
-          elements.extractedCodeValue.textContent = fullMsg.extracted.code;
+        const hasCode = fullMsg.extracted && !!fullMsg.extracted.code;
+        const hasLink = fullMsg.extracted && !!fullMsg.extracted.activationUrl;
+
+        if (hasCode || hasLink) {
+          if (hasCode) {
+            elements.extractedCodeValue.textContent = fullMsg.extracted.code;
+            elements.extractedCodeValue.classList.remove('hidden');
+            elements.btnCopyExtractedCode.classList.remove('hidden');
+            elements.verificationBadgeText.textContent = hasLink
+              ? 'CODE & LIEN DE VÉRIFICATION DÉTECTÉS'
+              : 'CODE DE VÉRIFICATION DÉTECTÉ';
+          } else {
+            elements.extractedCodeValue.classList.add('hidden');
+            elements.btnCopyExtractedCode.classList.add('hidden');
+            elements.verificationBadgeText.textContent = 'LIEN D\'ACTIVATION DÉTECTÉ';
+          }
+
+          if (hasLink) {
+            elements.btnOpenActivationLink.href = fullMsg.extracted.activationUrl;
+            elements.activationLinkContainer.classList.remove('hidden');
+          } else {
+            elements.activationLinkContainer.classList.add('hidden');
+          }
+
           elements.verificationCodeCard.classList.remove('hidden');
-        }
-        if (fullMsg.extracted && fullMsg.extracted.activationUrl) {
-          elements.btnOpenActivationLink.href = fullMsg.extracted.activationUrl;
-          elements.activationLinkContainer.classList.remove('hidden');
         }
       }
     }
@@ -391,8 +440,55 @@ async function openMessageDetail(messageId) {
     elements.modalMsgFrom.textContent = `De : ${msg.from?.name || ''} <${msg.from?.address || ''}>`;
     elements.modalMsgDate.textContent = msg.createdAt ? new Date(msg.createdAt).toLocaleString() : '';
 
-    const textContent = msg.text || (Array.isArray(msg.html) ? msg.html.join(' ') : msg.intro) || 'Aucun contenu texte';
-    elements.modalMsgBody.textContent = textContent;
+    // Render Detected Links Bar if any links were found in message
+    const links = (msg.extracted && Array.isArray(msg.extracted.links)) ? msg.extracted.links : [];
+    elements.modalLinksList.innerHTML = '';
+
+    if (links.length > 0) {
+      links.forEach(url => {
+        const item = document.createElement('div');
+        item.className = 'modal-link-item';
+        item.innerHTML = `
+          <a href="${escapeHtml(url)}" class="modal-link-anchor" title="${escapeHtml(url)}">🔗 ${escapeHtml(url)}</a>
+          <button class="btn btn-secondary btn-icon btn-sm btn-copy-link" title="Copier le lien">📋</button>
+        `;
+        item.querySelector('.btn-copy-link').addEventListener('click', (e) => {
+          e.stopPropagation();
+          copyToClipboard(url, 'Lien copié !');
+        });
+        elements.modalLinksList.appendChild(item);
+      });
+      elements.modalLinksSection.classList.remove('hidden');
+    } else {
+      elements.modalLinksSection.classList.add('hidden');
+    }
+
+    // Render Body with safe clickable links
+    if (msg.html && (Array.isArray(msg.html) ? msg.html.length > 0 : !!msg.html)) {
+      const rawHtml = Array.isArray(msg.html) ? msg.html.join('') : msg.html;
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml, 'text/html');
+        // Remove active scripts, styles, objects, embeds, iframes for security
+        doc.querySelectorAll('script, style, iframe, object, embed').forEach(el => el.remove());
+        doc.querySelectorAll('a').forEach(a => {
+          const href = a.getAttribute('href') || '';
+          if (href.startsWith('http://') || href.startsWith('https://')) {
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener noreferrer');
+            a.classList.add('email-link');
+          } else {
+            a.removeAttribute('href');
+          }
+        });
+        elements.modalMsgBody.innerHTML = doc.body.innerHTML || linkifyText(msg.text || msg.intro || '');
+      } catch {
+        elements.modalMsgBody.innerHTML = linkifyText(msg.text || msg.intro || 'Aucun contenu');
+      }
+    } else {
+      const textContent = msg.text || msg.intro || 'Aucun contenu texte';
+      elements.modalMsgBody.innerHTML = linkifyText(textContent);
+    }
 
     elements.messagesList.classList.add('hidden');
     elements.messageDetailModal.classList.remove('hidden');
@@ -547,6 +643,24 @@ function setupEventListeners() {
   elements.btnCopyExtractedCode.addEventListener('click', () => {
     copyToClipboard(elements.extractedCodeValue.textContent.trim(), 'Code de confirmation copié !');
   });
+  if (elements.btnOpenActivationLink) {
+    elements.btnOpenActivationLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const href = elements.btnOpenActivationLink.getAttribute('href');
+      if (href && href !== '#' && href.startsWith('http')) {
+        openUrl(href);
+      }
+    });
+  }
+  if (elements.btnCopyActivationLink) {
+    elements.btnCopyActivationLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const href = elements.btnOpenActivationLink.getAttribute('href');
+      if (href && href !== '#') {
+        copyToClipboard(href, 'Lien copié !');
+      }
+    });
+  }
   elements.btnCloseModal.addEventListener('click', closeMessageDetail);
 
   // Vault Actions
@@ -554,6 +668,18 @@ function setupEventListeners() {
     renderVaultList(e.target.value.trim());
   });
   elements.btnExportVault.addEventListener('click', exportVaultAsJson);
+
+  // Global delegated click handler to open all external links in new Chrome tab
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link) {
+      const href = link.getAttribute('href');
+      if (href && href !== '#' && (href.startsWith('http://') || href.startsWith('https://'))) {
+        e.preventDefault();
+        openUrl(href);
+      }
+    }
+  });
 }
 
 // Start application

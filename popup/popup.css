@@ -381,15 +381,38 @@ input:focus {
 }
 
 .activation-link-container {
-  margin-top: 8px;
+  margin-top: 10px;
+}
+
+.activation-link-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
 }
 
 .activation-btn {
-  display: inline-block;
-  font-size: 11px;
-  color: var(--primary);
-  text-decoration: underline;
-  word-break: break-all;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background-color: var(--primary);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius);
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.activation-btn:hover {
+  background-color: var(--primary-hover);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .messages-container {
@@ -488,6 +511,67 @@ input:focus {
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.modal-links-section {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.modal-links-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+.modal-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.modal-link-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+.modal-link-anchor {
+  flex: 1;
+  font-size: 11px;
+  color: var(--primary);
+  text-decoration: underline;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.modal-link-anchor:hover {
+  opacity: 0.8;
+}
+
+.modal-body a,
+.email-link {
+  color: var(--primary);
+  text-decoration: underline;
+  word-break: break-all;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.modal-body a:hover,
+.email-link:hover {
+  opacity: 0.8;
 }
 
 /* VAULT TAB */

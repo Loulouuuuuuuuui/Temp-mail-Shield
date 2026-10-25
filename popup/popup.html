@@ -128,16 +128,21 @@
       <!-- PROMINENT VERIFICATION CODE HIGHLIGHT CARD -->
       <div class="verification-code-card hidden" id="verification-code-card">
         <div class="code-header">
-          <span class="code-badge">CODE DE VÉRIFICATION DÉTECTÉ</span>
+          <span class="code-badge" id="verification-badge-text">CODE OU LIEN DÉTECTÉ</span>
         </div>
         <div class="code-value-display" id="extracted-code-value">------</div>
         <button class="btn btn-primary btn-sm" id="btn-copy-extracted-code">
           📋 Copier le code
         </button>
         <div class="activation-link-container hidden" id="activation-link-container">
-          <a href="#" target="_blank" class="activation-btn" id="btn-open-activation-link">
-            🔗 Ouvrir le lien d'activation
-          </a>
+          <div class="activation-link-row">
+            <a href="#" target="_blank" class="activation-btn" id="btn-open-activation-link">
+              🔗 Ouvrir le lien d'activation
+            </a>
+            <button class="btn btn-secondary btn-icon" id="btn-copy-activation-link" title="Copier le lien d'activation">
+              📋
+            </button>
+          </div>
         </div>
       </div>
 
@@ -160,8 +165,12 @@
           <span id="modal-msg-from">De : ...</span>
           <span id="modal-msg-date">...</span>
         </div>
+        <div class="modal-links-section hidden" id="modal-links-section">
+          <div class="modal-links-title">🔗 Liens détectés dans cet e-mail :</div>
+          <div class="modal-links-list" id="modal-links-list"></div>
+        </div>
         <div class="modal-body" id="modal-msg-body">
-          <!-- Text or parsed HTML -->
+          <!-- Text or parsed HTML with clickable links -->
         </div>
       </div>
     </section>
