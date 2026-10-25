@@ -70,6 +70,7 @@ const elements = {
 const state = {
   currentDomain: 'inconnu',
   activeTabId: null,
+  activeTabUrl: '',
   activeAccount: null, // { address, password, token }
   existingVaultAccount: null,
   messages: [],
@@ -148,9 +149,12 @@ async function detectCurrentDomain() {
   if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs && tabs[0] && tabs[0].url) {
+      if (tabs && tabs[0]) {
         state.activeTabId = tabs[0].id;
-        state.currentDomain = normalizeDomain(tabs[0].url) || 'site-web';
+        state.activeTabUrl = tabs[0].url || '';
+        if (tabs[0].url) {
+          state.currentDomain = normalizeDomain(tabs[0].url) || 'site-web';
+        }
       }
     } catch (e) {
       state.currentDomain = 'site-web';
@@ -192,7 +196,7 @@ async function generateNewIdentity(force = false) {
     await vault.setActiveSession(state.currentDomain, state.activeAccount);
     startInboxPolling();
   } catch (err) {
-    console.error('Identity generation failed:', err);
+    console.debug('Identity generation failed:', err);
     elements.tempEmail.value = 'Erreur de connexion';
     elements.tempPassword.value = generatePassword(16);
     showToast('Erreur serveur Mail.tm, réessayez');
@@ -236,9 +240,29 @@ async function initializeDomainState() {
 
 /** Autofill webpage form with given credentials */
 async function triggerAutofill(email, password) {
-  if (!state.activeTabId && typeof chrome !== 'undefined' && chrome.tabs) {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tabs[0]) state.activeTabId = tabs[0].id;
+  if (typeof chrome !== 'undefined' && chrome.tabs) {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs && tabs[0]) {
+        state.activeTabId = tabs[0].id;
+        state.activeTabUrl = tabs[0].url || '';
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const tabUrl = (state.activeTabUrl || '').toLowerCase();
+  if (
+    tabUrl.startsWith('chrome://') ||
+    tabUrl.startsWith('chrome-extension://') ||
+    tabUrl.startsWith('edge://') ||
+    tabUrl.startsWith('about:') ||
+    tabUrl.startsWith('devtools://') ||
+    tabUrl.includes('chromewebstore.google.com')
+  ) {
+    showToast('Page protégée par Chrome : utilisez Copier');
+    return;
   }
 
   if (!state.activeTabId || !chrome?.scripting) {
@@ -250,7 +274,7 @@ async function triggerAutofill(email, password) {
     const results = await chrome.scripting.executeScript({
       target: { tabId: state.activeTabId },
       func: fillFormFields,
-      args: [undefined, { email, password }]
+      args: [{ email: email || '', password: password || '' }]
     });
 
     const res = results && results[0] && results[0].result;
@@ -260,7 +284,7 @@ async function triggerAutofill(email, password) {
       showToast('Champs non détectés : utilisez Copier');
     }
   } catch (err) {
-    console.warn('Script injection failed:', err);
+    console.debug('Script injection skipped or failed:', err);
     showToast('Page protégée : utilisez Copier');
   }
 }
@@ -322,7 +346,7 @@ async function refreshInboxMessages() {
       }
     }
   } catch (err) {
-    console.warn('Inbox refresh error:', err);
+    console.debug('Inbox refresh error:', err);
   }
 }
 

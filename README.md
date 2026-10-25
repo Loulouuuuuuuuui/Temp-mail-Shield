@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Chrome_Extension-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Manifest V3"/>
   <img src="https://img.shields.io/badge/Stack-Vanilla_JS_&_CSS3-F7DF1E?logo=javascript&logoColor=black" alt="Vanilla JS"/>
-  <img src="https://img.shields.io/badge/Tests-25%2F25_Passing-success" alt="Tests 25/25 Passing"/>
+  <img src="https://img.shields.io/badge/Tests-26%2F26_Passing-success" alt="Tests 26/26 Passing"/>
   <img src="https://img.shields.io/badge/Privacy-100%25_Local_Storage-green" alt="Privacy First"/>
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License MIT"/>
 </p>
@@ -103,7 +103,7 @@ Temp-mail-Shield/
 
 ## 🧪 Tests Unitaires Automatisés
 
-Le projet intègre une suite de 25 tests unitaires automatisés utilisant le test runner natif de Node.js, sans aucune dépendance npm :
+Le projet intègre une suite de 26 tests unitaires automatisés utilisant le test runner natif de Node.js, sans aucune dépendance npm :
 
 ```bash
 npm test

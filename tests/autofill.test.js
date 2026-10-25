@@ -87,3 +87,23 @@ test('fillFormFields is self-contained when serialized via toString() (MV3 execu
   assert.equal(inputs[0].value, 'test@mail.com');
 });
 
+test('fillFormFields supports single-argument credentials object using globalThis.document', () => {
+  const emailInput = createMockInput({ type: 'email' });
+  const pwdInput = createMockInput({ type: 'password' });
+
+  const prevDoc = globalThis.document;
+  globalThis.document = {
+    querySelectorAll: () => [emailInput, pwdInput]
+  };
+
+  try {
+    const result = fillFormFields({ email: 'direct@temp.com', password: 'SingleArgPassword1!' });
+    assert.equal(result.filledEmail, true);
+    assert.equal(result.filledPassword, true);
+    assert.equal(emailInput.value, 'direct@temp.com');
+    assert.equal(pwdInput.value, 'SingleArgPassword1!');
+  } finally {
+    globalThis.document = prevDoc;
+  }
+});
+

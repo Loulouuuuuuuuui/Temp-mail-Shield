@@ -7,11 +7,28 @@
 /**
  * Scan DOM inputs and fill email and password.
  * Self-contained function suitable for direct serialization via chrome.scripting.executeScript.
- * @param {Document|Object} [doc=globalThis.document]
- * @param {{ email?: string, password?: string }} [credentials={}]
+ * Supports both fillFormFields(credentials) when executed in page DOM,
+ * and fillFormFields(doc, credentials) for mock DOM unit tests.
+ * @param {Document|Object|{ email?: string, password?: string }} [arg1=globalThis.document]
+ * @param {{ email?: string, password?: string }|Document|Object} [arg2={}]
  * @returns {{ filledEmail: boolean, filledPassword: boolean }}
  */
-export function fillFormFields(doc = globalThis.document, { email, password } = {}) {
+export function fillFormFields(arg1, arg2) {
+  let doc = typeof globalThis !== 'undefined' ? globalThis.document : null;
+  let credentials = {};
+
+  if (arg1 && typeof arg1.querySelectorAll === 'function') {
+    doc = arg1;
+    credentials = (typeof arg2 === 'object' && arg2) ? arg2 : {};
+  } else if (arg1 && typeof arg1 === 'object') {
+    credentials = arg1;
+    if (arg2 && typeof arg2.querySelectorAll === 'function') {
+      doc = arg2;
+    }
+  }
+
+  const email = credentials.email || '';
+  const password = credentials.password || '';
   let filledEmail = false;
   let filledPassword = false;
 
